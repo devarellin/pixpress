@@ -1,0 +1,9 @@
+node_modules
+.env
+
+# husky
+.husky
+
+# Hardhat files
+cache
+artifacts
