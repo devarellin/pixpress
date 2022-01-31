@@ -14,7 +14,7 @@ contract PixelAva is ERC721Enumerable, Ownable {
   Counters.Counter private _tokenIds;
   mapping(uint256 => string) private _names;
 
-  constructor(string memory baseUri) ERC721("PixelAva", "PXA") {
+  constructor(string memory baseUri) ERC721("PixelAvaV2", "PXA") {
     BASE_URI = baseUri;
   }
 

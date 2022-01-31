@@ -4,7 +4,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   await deploy('PixelAva', {
     from: deployer,
     log: true,
-    args: ['https://test-service.pixelava.space/api/metadata/']
+    args: ['https://mock-service.pixelava.space/api/metadata/']
   });
 };
 
