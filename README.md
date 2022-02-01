@@ -1,4 +1,4 @@
 # Contract Address
 
-Mainnet:
+Mainnet: 0x4cc7c55aB8B7d218B706cAE17DcA32B7bDb357B3
 Alfajores: 0x5c9252B5568Bb0Da0AF71a2Ffc526dE11F4F16C9
