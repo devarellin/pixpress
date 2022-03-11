@@ -32,6 +32,6 @@
     "solhint": "^3.3.6"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.4.2"
+    "@openzeppelin/contracts": "^4.5.0"
   }
 }
