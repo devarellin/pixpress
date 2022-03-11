@@ -37,8 +37,10 @@ contract AssetSwapper is ReentrancyGuard {
   // events
 
   event Propose(uint256 indexed id, ProposeRecord record);
-  event Match(uint256 indexed id, ProposeRecord record);
-  event Swap(uint256 indexed id);
+  event Match(uint256 indexed id, MatchRecord record);
+  event Swap(uint256 indexed proposeId, uint256 indexed matchId);
+  event RemovePropose(uint256 indexed id, ProposeRecord record);
+  event RemoveMatch(uint256 indexed id, MatchRecord record);
 
   // vars
 
@@ -97,6 +99,8 @@ contract AssetSwapper is ReentrancyGuard {
     uint256 id = _matchRecordIds.current();
     matchRecords[id] = MatchRecord(proposeId, msg.sender, tokenAddresses, amounts, ids, protocols);
     proposeRecords[proposeId].matchRecordIds.push(id);
+
+    emit Match(id, matchRecords[id]);
   }
 
   function acceptSwap(uint256 proposeId, uint256 matchId) external nonReentrant {
@@ -132,6 +136,8 @@ contract AssetSwapper is ReentrancyGuard {
     for (uint256 index = 0; index < proposeRecord.matchRecordIds.length; index++) {
       delete matchRecords[proposeRecord.matchRecordIds[index]];
     }
+
+    emit Swap(proposeId, matchId);
   }
 
   function _proposeAssetsValid(ProposeRecord storage record) internal view returns (bool) {
@@ -239,6 +245,8 @@ contract AssetSwapper is ReentrancyGuard {
   function removeProposeRecord(uint256 proposeId) external nonReentrant {
     require((msg.sender == proposeRecords[proposeId].proposer), "Asset Swapper: invalid proposer");
     _removeProposeRecord(proposeId);
+
+    emit RemovePropose(proposeId, proposeRecords[proposeId]);
   }
 
   function _removeProposeRecord(uint256 proposeId) internal {
@@ -253,6 +261,8 @@ contract AssetSwapper is ReentrancyGuard {
   function removeMatchRecord(uint256 matchId) public nonReentrant {
     require(matchRecords[matchId].matcher == msg.sender, "Asset Swapper: invalid matcher");
     _removeMatchRecord(matchId);
+
+    emit RemoveMatch(matchId, matchRecords[matchId]);
   }
 
   function _removeMatchRecord(uint256 matchId) internal {
