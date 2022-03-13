@@ -37,11 +37,11 @@ contract AssetSwapper is ReentrancyGuard {
 
   // events
 
-  event Propose(uint256 indexed id, ProposeRecord record);
-  event Match(uint256 indexed id, MatchRecord record);
-  event Swap(uint256 indexed proposeId, uint256 indexed matchId);
-  event RemovePropose(uint256 indexed id, ProposeRecord record);
-  event RemoveMatch(uint256 indexed id, MatchRecord record);
+  event Proposed(uint256 indexed id, ProposeRecord record);
+  event Matched(uint256 indexed id, MatchRecord record);
+  event Swapped(uint256 indexed proposeId, uint256 indexed matchId);
+  event ProposalRemoved(uint256 indexed id, ProposeRecord record);
+  event MatcherRemoved(uint256 indexed id, MatchRecord record);
 
   // vars
 
@@ -82,7 +82,7 @@ contract AssetSwapper is ReentrancyGuard {
       new uint256[](0)
     );
 
-    emit Propose(id, proposeRecords[id]);
+    emit Proposed(id, proposeRecords[id]);
   }
 
   function matchSwap(
@@ -109,7 +109,7 @@ contract AssetSwapper is ReentrancyGuard {
     );
     proposeRecords[proposeId].matchRecordIds.push(id);
 
-    emit Match(id, matchRecords[id]);
+    emit Matched(id, matchRecords[id]);
   }
 
   function acceptSwap(uint256 proposeId, uint256 matchId) external nonReentrant {
@@ -146,7 +146,7 @@ contract AssetSwapper is ReentrancyGuard {
       delete matchRecords[proposeRecord.matchRecordIds[index]];
     }
 
-    emit Swap(proposeId, matchId);
+    emit Swapped(proposeId, matchId);
   }
 
   function _proposeAssetsValid(ProposeRecord storage record) internal view returns (bool) {
@@ -255,7 +255,7 @@ contract AssetSwapper is ReentrancyGuard {
     require((msg.sender == proposeRecords[proposeId].proposer), "Asset Swapper: invalid proposer");
     _removeProposeRecord(proposeId);
 
-    emit RemovePropose(proposeId, proposeRecords[proposeId]);
+    emit ProposalRemoved(proposeId, proposeRecords[proposeId]);
   }
 
   function _removeProposeRecord(uint256 proposeId) internal {
@@ -273,7 +273,7 @@ contract AssetSwapper is ReentrancyGuard {
     _removeProposeRecordMatchId(matchRecord);
     _removeMatchRecord(matchId);
 
-    emit RemoveMatch(matchId, matchRecords[matchId]);
+    emit MatcherRemoved(matchId, matchRecords[matchId]);
   }
 
   function _removeProposeRecordMatchId(MatchRecord storage matchRecord) internal {
