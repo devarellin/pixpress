@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract PxaMarket is Ownable {
   // constants
-  uint256 public constant RATE_BASE = 1e6;
+  uint256 public constant PXA_RATE_BASE = 1e6;
 
   struct PxaOrder {
     address seller;
@@ -88,11 +88,11 @@ contract PxaMarket is Ownable {
     _pxaAddress = pxaAddress;
   }
 
-  function setFeeRatio(uint256 value) external onlyOwner {
+  function setPxaFeeRatio(uint256 value) external onlyOwner {
     _pxaFeeRatio = value;
   }
 
-  function feeRatio() external view returns (uint256) {
+  function pxaFeeRatio() external view returns (uint256) {
     return _pxaFeeRatio;
   }
 
@@ -110,7 +110,7 @@ contract PxaMarket is Ownable {
   ) internal {
     _claim(buyer, tokenId);
     uint256 price = orders[tokenId].price;
-    uint256 fee = (price * _pxaFeeRatio) / RATE_BASE;
+    uint256 fee = (price * _pxaFeeRatio) / PXA_RATE_BASE;
     payable(seller).transfer(price - fee);
     _remove(tokenId);
   }
