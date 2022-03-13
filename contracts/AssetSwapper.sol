@@ -8,8 +8,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./AssetManager.sol";
 
-contract AssetSwapper is ReentrancyGuard {
+contract AssetSwapper is AssetManager, ReentrancyGuard {
   using Counters for Counters.Counter;
   using SafeERC20 for IERC20;
 
@@ -43,18 +44,12 @@ contract AssetSwapper is ReentrancyGuard {
   event ProposalRemoved(uint256 indexed id, ProposeRecord record);
   event MatcherRemoved(uint256 indexed id, MatchRecord record);
 
-  // vars
-
-  uint8 public constant PROTOCOL_ERC20 = 1;
-  uint8 public constant PROTOCOL_ERC721 = 2;
-  uint8 public constant PROTOCOL_ERC1155 = 3;
-
   Counters.Counter private _proposeRecordIds;
   mapping(uint256 => ProposeRecord) proposeRecords;
   Counters.Counter private _matchRecordIds;
   mapping(uint256 => MatchRecord) matchRecords;
 
-  function proposeSwap(
+  function _proposeSwap(
     address receiver,
     string calldata note,
     address[] calldata tokenAddresses,
@@ -62,7 +57,7 @@ contract AssetSwapper is ReentrancyGuard {
     uint256[] calldata ids,
     uint8[] calldata protocols,
     bool[] calldata wanted
-  ) external nonReentrant {
+  ) internal {
     require(tokenAddresses.length == amounts.length, "Asset Swapper: amount record size does not match");
     require(tokenAddresses.length == ids.length, "Asset Swapper: id record size does not match");
     require(tokenAddresses.length == protocols.length, "Asset Swapper: protocol record size does not match");
@@ -85,17 +80,13 @@ contract AssetSwapper is ReentrancyGuard {
     emit Proposed(id, proposeRecords[id]);
   }
 
-  function matchSwap(
+  function _matchSwap(
     uint256 proposeId,
     address[] calldata tokenAddresses,
     uint256[] calldata amounts,
     uint256[] calldata ids,
     uint8[] calldata protocols
-  ) external nonReentrant {
-    require(tokenAddresses.length == amounts.length, "Asset Swapper: amount record size does not match");
-    require(tokenAddresses.length == ids.length, "Asset Swapper: id record size does not match");
-    require(tokenAddresses.length == protocols.length, "Asset Swapper: protocol record size does not match");
-
+  ) internal {
     _matchRecordIds.increment();
     uint256 id = _matchRecordIds.current();
     matchRecords[id] = MatchRecord(

@@ -5,10 +5,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 pragma solidity ^0.8.12;
 
 contract AssetManager is Ownable {
+  // constants
   uint256 public constant AM_RATE_BASE = 1e6;
+  uint8 public constant PROTOCOL_ERC20 = 1;
+  uint8 public constant PROTOCOL_ERC721 = 2;
+  uint8 public constant PROTOCOL_ERC1155 = 3;
 
   struct Asset {
     address tokenAddress;
+    uint8 protocol;
     bool verified;
     uint256 feeBase;
     uint256 feeRatio;
@@ -20,9 +25,9 @@ contract AssetManager is Ownable {
 
   mapping(address => Asset) public assets;
 
-  function createAsset(address tokenAddress) external {
+  function createAsset(address tokenAddress, uint8 protocol) external {
     require(assets[tokenAddress].tokenAddress == address(0x0), "AssetManager: asset already exist");
-    assets[tokenAddress] = Asset(tokenAddress, false, _amFeeBase, _amFeeRatio);
+    assets[tokenAddress] = Asset(tokenAddress, protocol, false, _amFeeBase, _amFeeRatio);
   }
 
   function setAssetFeeBase(address tokenAddress, uint256 base) external onlyOwner {
@@ -54,5 +59,13 @@ contract AssetManager is Ownable {
 
   function amFeeRatio() external view returns (uint256) {
     return _amFeeRatio;
+  }
+
+  function _assetFee(address tokenAddress) internal view returns (uint256) {
+    if (assets[tokenAddress].tokenAddress == address(0x0)) {
+      return _amFeeBase * _amFeeRatio;
+    } else {
+      return assets[tokenAddress].feeBase * assets[tokenAddress].feeRatio;
+    }
   }
 }
