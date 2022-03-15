@@ -87,6 +87,9 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
     uint256[] calldata ids,
     uint8[] calldata protocols
   ) internal {
+    require(tokenAddresses.length == amounts.length, "Assest Swapper: amount record size does not match");
+    require(tokenAddresses.length == ids.length, "Assest Swapper: id record size does not match");
+    require(tokenAddresses.length == protocols.length, "Assest Swapper: protocol record size does not match");
     _matchRecordIds.increment();
     uint256 id = _matchRecordIds.current();
     matchRecords[id] = MatchRecord(
@@ -103,7 +106,7 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
     emit Matched(id, matchRecords[id]);
   }
 
-  function acceptSwap(uint256 proposeId, uint256 matchId) external nonReentrant {
+  function _acceptSwap(uint256 proposeId, uint256 matchId) internal {
     ProposeRecord storage proposeRecord = proposeRecords[proposeId];
     MatchRecord storage matchRecord = matchRecords[matchId];
     require(proposeRecord.proposer == msg.sender, "Asset Swapper: invalid proposer");
