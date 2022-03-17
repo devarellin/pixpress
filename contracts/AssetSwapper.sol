@@ -51,12 +51,12 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
 
   function _proposeSwap(
     address receiver,
-    string calldata note,
-    address[] calldata tokenAddresses,
-    uint256[] calldata amounts,
-    uint256[] calldata ids,
-    uint8[] calldata protocols,
-    bool[] calldata wanted
+    string memory note,
+    address[] memory tokenAddresses,
+    uint256[] memory amounts,
+    uint256[] memory ids,
+    uint8[] memory protocols,
+    bool[] memory wanted
   ) internal {
     require(tokenAddresses.length == amounts.length, "Asset Swapper: amount record size does not match");
     require(tokenAddresses.length == ids.length, "Asset Swapper: id record size does not match");
@@ -82,10 +82,10 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
 
   function _matchSwap(
     uint256 proposeId,
-    address[] calldata tokenAddresses,
-    uint256[] calldata amounts,
-    uint256[] calldata ids,
-    uint8[] calldata protocols
+    address[] memory tokenAddresses,
+    uint256[] memory amounts,
+    uint256[] memory ids,
+    uint8[] memory protocols
   ) internal {
     require(tokenAddresses.length == amounts.length, "Assest Swapper: amount record size does not match");
     require(tokenAddresses.length == ids.length, "Assest Swapper: id record size does not match");
