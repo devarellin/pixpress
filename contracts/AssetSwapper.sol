@@ -45,9 +45,17 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
   event MatcherRemoved(uint256 indexed id, MatchRecord record);
 
   Counters.Counter private _proposeRecordIds;
-  mapping(uint256 => ProposeRecord) proposeRecords;
+  mapping(uint256 => ProposeRecord) _proposeRecords;
   Counters.Counter private _matchRecordIds;
-  mapping(uint256 => MatchRecord) matchRecords;
+  mapping(uint256 => MatchRecord) _matchRecords;
+
+  function proposeRecord(uint256 id) external view returns (ProposeRecord memory record) {
+    return _proposeRecords[id];
+  }
+
+  function matchRecord(uint256 id) external view returns (MatchRecord memory record) {
+    return _matchRecords[id];
+  }
 
   function _proposeSwap(
     address receiver,
@@ -65,7 +73,7 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
 
     _proposeRecordIds.increment();
     uint256 id = _proposeRecordIds.current();
-    proposeRecords[id] = ProposeRecord(
+    _proposeRecords[id] = ProposeRecord(
       msg.sender,
       receiver,
       note,
@@ -77,7 +85,7 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
       new uint256[](0)
     );
 
-    emit Proposed(id, proposeRecords[id]);
+    emit Proposed(id, _proposeRecords[id]);
   }
 
   function _matchSwap(
@@ -92,52 +100,48 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
     require(tokenAddresses.length == protocols.length, "Assest Swapper: protocol record size does not match");
     _matchRecordIds.increment();
     uint256 id = _matchRecordIds.current();
-    matchRecords[id] = MatchRecord(
+    _matchRecords[id] = MatchRecord(
       proposeId,
       msg.sender,
       tokenAddresses,
       amounts,
       ids,
       protocols,
-      proposeRecords[proposeId].matchRecordIds.length
+      _proposeRecords[proposeId].matchRecordIds.length
     );
-    proposeRecords[proposeId].matchRecordIds.push(id);
+    _proposeRecords[proposeId].matchRecordIds.push(id);
 
-    emit Matched(id, matchRecords[id]);
+    emit Matched(id, _matchRecords[id]);
   }
 
   function _acceptSwap(uint256 proposeId, uint256 matchId) internal {
-    ProposeRecord storage proposeRecord = proposeRecords[proposeId];
-    MatchRecord storage matchRecord = matchRecords[matchId];
-    require(proposeRecord.proposer == msg.sender, "Asset Swapper: invalid proposer");
-    require(proposeId == matchRecord.proposeId, "Asset Swapper: invalid match id");
-    require(_proposeAssetsValid(proposeRecord), "Asset Swapper: proposer assets invalid");
-    require(_matchAssetsValid(matchRecord), "Asset Swapper: matcher assets invalid");
+    ProposeRecord storage pRecord = _proposeRecords[proposeId];
+    MatchRecord storage mRecord = _matchRecords[matchId];
+    require(pRecord.proposer == msg.sender, "Asset Swapper: invalid proposer");
+    require(proposeId == mRecord.proposeId, "Asset Swapper: invalid match id");
+    require(_proposeAssetsValid(pRecord), "Asset Swapper: proposer assets invalid");
+    require(_matchAssetsValid(mRecord), "Asset Swapper: matcher assets invalid");
 
-    for (uint256 index = 0; index < proposeRecord.tokenAddresses.length; index++) {
+    for (uint256 index = 0; index < pRecord.tokenAddresses.length; index++) {
+      if (pRecord.wanted[index] == true) continue;
       _transferAsset(
-        proposeRecord.proposer,
-        matchRecord.matcher,
-        proposeRecord.tokenAddresses[index],
-        proposeRecord.amounts[index],
-        proposeRecord.ids[index],
-        proposeRecord.protocols[index]
+        pRecord.proposer,
+        mRecord.matcher,
+        pRecord.tokenAddresses[index],
+        pRecord.amounts[index],
+        pRecord.ids[index],
+        pRecord.protocols[index]
       );
     }
-    for (uint256 index = 0; index < matchRecord.tokenAddresses.length; index++) {
+    for (uint256 index = 0; index < mRecord.tokenAddresses.length; index++) {
       _transferAsset(
-        matchRecord.matcher,
-        proposeRecord.proposer,
-        matchRecord.tokenAddresses[index],
-        matchRecord.amounts[index],
-        matchRecord.ids[index],
-        matchRecord.protocols[index]
+        mRecord.matcher,
+        pRecord.proposer,
+        mRecord.tokenAddresses[index],
+        mRecord.amounts[index],
+        mRecord.ids[index],
+        mRecord.protocols[index]
       );
-    }
-
-    delete proposeRecords[proposeId];
-    for (uint256 index = 0; index < proposeRecord.matchRecordIds.length; index++) {
-      delete matchRecords[proposeRecord.matchRecordIds[index]];
     }
 
     emit Swapped(proposeId, matchId);
@@ -149,14 +153,16 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
     uint256[] storage tokenIds = record.ids;
     uint8[] storage protocols = record.protocols;
     uint256[] storage amounts = record.amounts;
+    bool[] storage wanted = record.wanted;
     for (uint256 i = 0; i < tokenAddresses.length; i++) {
+      if (wanted[i]) continue;
       require(
         _assetApproved(proposer, tokenAddresses[i], tokenIds[i], protocols[i], amounts[i]),
         "Asset Swapper: some proposer assets are not approved"
       );
       require(
         _assetInStock(proposer, tokenAddresses[i], tokenIds[i], protocols[i], amounts[i]),
-        "Asset Swapper: some proposer assets are not approved"
+        "Asset Swapper: some proposer assets are not in stock"
       );
     }
     return true;
@@ -175,7 +181,7 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
       );
       require(
         _assetInStock(matcher, tokenAddresses[i], tokenIds[i], protocols[i], amounts[i]),
-        "Asset Swapper: some matcher assets are not approved"
+        "Asset Swapper: some matcher assets are not in stock"
       );
     }
     return true;
@@ -215,10 +221,13 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
   ) internal view returns (bool) {
     if (protocol == PROTOCOL_ERC20) {
       IERC20 t = IERC20(tokenAddress);
-      require(t.balanceOf(tokenOwner) >= amount, "Asset Swapper: insufficient token balance");
+      require(t.balanceOf(tokenOwner) >= amount, "Asset Swapper: ERC20 insufficient token balance");
+    } else if (protocol == PROTOCOL_ERC721) {
+      IERC721 t = IERC721(tokenAddress);
+      require(t.ownerOf(tokenId) == tokenOwner, "Asset Swapper: ERC721 insufficient token balance");
     } else if (protocol == PROTOCOL_ERC1155) {
       IERC1155 t = IERC1155(tokenAddress);
-      require(t.balanceOf(tokenOwner, tokenId) >= amount, "Asset Swapper: insufficient token balance");
+      require(t.balanceOf(tokenOwner, tokenId) >= amount, "Asset Swapper: ERC1155 insufficient token balance");
     } else {
       revert("Asset Swapper: unsupported token protocol");
     }
@@ -233,7 +242,6 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
     uint256 id,
     uint8 protocol
   ) internal {
-    // Normal ERC-20 transfer
     if (protocol == PROTOCOL_ERC20) {
       IERC20(tokenAddress).safeTransferFrom(sender, receiver, amount);
     } else if (protocol == PROTOCOL_ERC721) {
@@ -246,40 +254,40 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
   }
 
   function removeProposeRecord(uint256 proposeId) external nonReentrant {
-    require((msg.sender == proposeRecords[proposeId].proposer), "Asset Swapper: invalid proposer");
+    require((msg.sender == _proposeRecords[proposeId].proposer), "Asset Swapper: invalid proposer");
     _removeProposeRecord(proposeId);
 
-    emit ProposalRemoved(proposeId, proposeRecords[proposeId]);
+    emit ProposalRemoved(proposeId, _proposeRecords[proposeId]);
   }
 
   function _removeProposeRecord(uint256 proposeId) internal {
-    ProposeRecord storage record = proposeRecords[proposeId];
+    ProposeRecord storage record = _proposeRecords[proposeId];
 
-    delete proposeRecords[proposeId];
+    delete _proposeRecords[proposeId];
     for (uint256 index = 0; index < record.matchRecordIds.length; index++) {
       _removeMatchRecord(record.matchRecordIds[index]);
     }
   }
 
   function removeMatchRecord(uint256 matchId) public nonReentrant {
-    require(matchRecords[matchId].matcher == msg.sender, "Asset Swapper: invalid matcher");
-    MatchRecord storage matchRecord = matchRecords[matchId];
-    _removeProposeRecordMatchId(matchRecord);
+    require(_matchRecords[matchId].matcher == msg.sender, "Asset Swapper: invalid matcher");
+    MatchRecord storage mRecord = _matchRecords[matchId];
+    _removeProposeRecordMatchId(mRecord);
     _removeMatchRecord(matchId);
 
-    emit MatcherRemoved(matchId, matchRecords[matchId]);
+    emit MatcherRemoved(matchId, _matchRecords[matchId]);
   }
 
-  function _removeProposeRecordMatchId(MatchRecord storage matchRecord) internal {
-    ProposeRecord storage proposeRecord = proposeRecords[matchRecord.proposeId];
-    uint256 lastMatchIdIndex = proposeRecord.matchRecordIds.length - 1;
-    MatchRecord storage lastMatchIdRecord = matchRecords[proposeRecord.matchRecordIds[lastMatchIdIndex]];
-    lastMatchIdRecord.index = matchRecord.index;
-    proposeRecord.matchRecordIds[matchRecord.index] = proposeRecord.matchRecordIds[lastMatchIdIndex];
-    proposeRecord.matchRecordIds.pop();
+  function _removeProposeRecordMatchId(MatchRecord storage mRecord) internal {
+    ProposeRecord storage pRecord = _proposeRecords[mRecord.proposeId];
+    uint256 lastMatchIdIndex = pRecord.matchRecordIds.length - 1;
+    MatchRecord storage lastMatchIdRecord = _matchRecords[pRecord.matchRecordIds[lastMatchIdIndex]];
+    lastMatchIdRecord.index = mRecord.index;
+    pRecord.matchRecordIds[mRecord.index] = pRecord.matchRecordIds[lastMatchIdIndex];
+    pRecord.matchRecordIds.pop();
   }
 
   function _removeMatchRecord(uint256 matchId) internal {
-    delete matchRecords[matchId];
+    delete _matchRecords[matchId];
   }
 }

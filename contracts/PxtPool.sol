@@ -3,19 +3,18 @@
 pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "hardhat/console.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract PxtPool is Ownable {
-  using SafeERC20 for IERC20;
+  using SafeERC20 for IERC20Metadata;
   // vars
-  IERC20 private _pxtAddress;
+  IERC20Metadata private _pxtAddress;
   uint256 public poolWindow;
   uint256 public poolUpperBoundary;
   uint256 public poolLowerBoundary;
 
-  constructor(IERC20 pxtAddress) {
+  constructor(IERC20Metadata pxtAddress) {
     _pxtAddress = pxtAddress;
     poolWindow = 10;
   }
@@ -45,11 +44,13 @@ contract PxtPool is Ownable {
   }
 
   function perDeposit() public view returns (uint256) {
+    if (balance() == 0) return (poolUpperBoundary / poolWindow) * 10**_pxtAddress.decimals();
     return poolUpperBoundary / balance();
   }
 
   function perWithdraw() public view returns (uint256) {
-    return poolLowerBoundary / balance();
+    if (balance() == 0) return 0;
+    return (balance() / poolLowerBoundary) * 10**_pxtAddress.decimals();
   }
 
   function _userDesposit(address user, uint256 value) internal {
@@ -59,6 +60,7 @@ contract PxtPool is Ownable {
 
   function _userWithdraw(address user, uint256 value) internal {
     require(value <= perWithdraw(), "PXT Pool: insufficient balance");
-    _pxtAddress.safeTransferFrom(address(this), user, value);
+    _pxtAddress.approve(user, value);
+    _pxtAddress.safeTransfer(user, value);
   }
 }

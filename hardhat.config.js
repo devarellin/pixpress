@@ -19,7 +19,8 @@ module.exports = {
   solidity: "0.8.12",
   namedAccounts: {
     deployer: 0,
-    user: 1
+    userA: 1,
+    userB: 2,
   },
   networks: {
     hardhat: {
@@ -34,6 +35,8 @@ module.exports = {
       url: "https://alfajores-forno.celo-testnet.org",
       chainId: 44787,
       accounts: [process.env.PRIVATE_KEY],
+      pxaAddress: '0x082C09c950d002a6020d68BA8e20a13802B0B20d',
+      pxtAddress: '0xd5E3bD9e68578F711407579991E01853Aa0d0B86',
       tags: ['testnet']
     },
     celo: {

@@ -20,3 +20,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 };
 
 module.exports.tags = ['Mocks'];
+module.exports.skip = (env) => !env.network.tags.local

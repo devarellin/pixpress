@@ -23,30 +23,55 @@ contract AssetManager is Ownable {
   uint256 _amFeeBase = 10 ether;
   uint256 _amFeeRatio = 10000;
 
+  // events
+  event AssetCreated(address indexed tokenAddress, Asset record);
+  event AssetRemoved(address indexed tokenAddress);
+  event AssetVerified(address indexed tokenAddress, bool verified);
+  event AssetFeeBaseUpdated(address indexed tokenAddress, uint256 feeBase);
+  event AssetFeeRatioUpdated(address indexed tokenAddress, uint256 feeRatio);
+  event DefaultAssetFeeBaseUpdated(uint256 feeBase);
+  event DefaultAssetFeeRatioUpdated(uint256 feeRatio);
+
   mapping(address => Asset) public assets;
 
   function createAsset(address tokenAddress, uint8 protocol) external {
     require(assets[tokenAddress].tokenAddress == address(0x0), "AssetManager: asset already exist");
     assets[tokenAddress] = Asset(tokenAddress, protocol, false, _amFeeBase, _amFeeRatio);
+
+    emit AssetCreated(tokenAddress, assets[tokenAddress]);
+  }
+
+  function removeAsset(address tokenAddress) external onlyOwner {
+    delete assets[tokenAddress];
+
+    emit AssetRemoved(tokenAddress);
   }
 
   function setAssetFeeBase(address tokenAddress, uint256 base) external onlyOwner {
     require(assets[tokenAddress].tokenAddress != address(0x0), "AssetManager: asset does not exist");
     assets[tokenAddress].feeBase = base;
+
+    emit AssetFeeBaseUpdated(tokenAddress, base);
   }
 
   function setAssetFeeRatio(address tokenAddress, uint256 ratio) external onlyOwner {
     require(assets[tokenAddress].tokenAddress != address(0x0), "AssetManager: asset does not exist");
     assets[tokenAddress].feeRatio = ratio;
+
+    emit AssetFeeRatioUpdated(tokenAddress, ratio);
   }
 
   function setAssetVerified(address tokenAddress, bool verified) external onlyOwner {
     require(assets[tokenAddress].tokenAddress != address(0x0), "AssetManager: asset does not exist");
     assets[tokenAddress].verified = verified;
+
+    emit AssetVerified(tokenAddress, verified);
   }
 
   function setAmFeeBase(uint256 value) external onlyOwner {
     _amFeeBase = value;
+
+    emit DefaultAssetFeeBaseUpdated(value);
   }
 
   function amFeeBase() external view returns (uint256) {
@@ -55,6 +80,8 @@ contract AssetManager is Ownable {
 
   function setAmFeeRatio(uint256 value) external onlyOwner {
     _amFeeRatio = value;
+
+    emit DefaultAssetFeeRatioUpdated(value);
   }
 
   function amFeeRatio() external view returns (uint256) {
@@ -63,9 +90,9 @@ contract AssetManager is Ownable {
 
   function _assetFee(address tokenAddress) internal view returns (uint256) {
     if (assets[tokenAddress].tokenAddress == address(0x0)) {
-      return _amFeeBase * _amFeeRatio;
+      return (_amFeeBase * _amFeeRatio) / AM_RATE_BASE;
     } else {
-      return assets[tokenAddress].feeBase * assets[tokenAddress].feeRatio;
+      return (assets[tokenAddress].feeBase * assets[tokenAddress].feeRatio) / AM_RATE_BASE;
     }
   }
 }
