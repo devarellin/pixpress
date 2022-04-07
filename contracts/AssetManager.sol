@@ -14,7 +14,6 @@ contract AssetManager is Ownable {
   struct Asset {
     address tokenAddress;
     uint8 protocol;
-    bool verified;
     uint256 feeBase;
     uint256 feeRatio;
   }
@@ -26,7 +25,6 @@ contract AssetManager is Ownable {
   // events
   event AssetCreated(address indexed tokenAddress, Asset record);
   event AssetRemoved(address indexed tokenAddress);
-  event AssetVerified(address indexed tokenAddress, bool verified);
   event AssetFeeBaseUpdated(address indexed tokenAddress, uint256 feeBase);
   event AssetFeeRatioUpdated(address indexed tokenAddress, uint256 feeRatio);
   event DefaultAssetFeeBaseUpdated(uint256 feeBase);
@@ -34,9 +32,18 @@ contract AssetManager is Ownable {
 
   mapping(address => Asset) public assets;
 
-  function createAsset(address tokenAddress, uint8 protocol) external {
+  function asset(address tokenAddress) external view returns (Asset memory record) {
+    return assets[tokenAddress];
+  }
+
+  function createAsset(
+    address tokenAddress,
+    uint8 protocol,
+    uint256 base,
+    uint256 ratio
+  ) external {
     require(assets[tokenAddress].tokenAddress == address(0x0), "AssetManager: asset already exist");
-    assets[tokenAddress] = Asset(tokenAddress, protocol, false, _amFeeBase, _amFeeRatio);
+    assets[tokenAddress] = Asset(tokenAddress, protocol, base, ratio);
 
     emit AssetCreated(tokenAddress, assets[tokenAddress]);
   }
@@ -59,13 +66,6 @@ contract AssetManager is Ownable {
     assets[tokenAddress].feeRatio = ratio;
 
     emit AssetFeeRatioUpdated(tokenAddress, ratio);
-  }
-
-  function setAssetVerified(address tokenAddress, bool verified) external onlyOwner {
-    require(assets[tokenAddress].tokenAddress != address(0x0), "AssetManager: asset does not exist");
-    assets[tokenAddress].verified = verified;
-
-    emit AssetVerified(tokenAddress, verified);
   }
 
   function setAmFeeBase(uint256 value) external onlyOwner {
