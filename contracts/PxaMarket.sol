@@ -89,7 +89,7 @@ contract PxaMarket is Ownable {
     uint256 revenue = totalRevenue / _orderIds.length;
     for (uint256 i = 0; i < _orderIds.length; i++) {
       _orders[_orderIds[i]].revenue += revenue;
-      emit RevenueIncreased(_orderIds[i], revenue);
+      emit RevenueIncreased(_orderIds[i], _orders[_orderIds[i]].revenue);
     }
   }
 
