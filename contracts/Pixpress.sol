@@ -23,7 +23,7 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
     uint8[] memory protocols,
     bool[] memory wanted
   ) external payable nonReentrant {
-    uint256 fee = calcSwapFee(tokenAddresses, amounts, wanted);
+    uint256 fee = calcSwapFee(tokenAddresses, protocols, amounts, wanted);
     require(msg.value >= fee, "Pixpress: insufficient swap fee");
     _proposeSwap(receiver, note, tokenAddresses, amounts, ids, protocols, wanted);
     uint256 feeShare = (fee * pxaFeeShareRatio) / PXA_RATE_BASE;
@@ -57,7 +57,7 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
     for (uint256 i = 0; i < wanted.length; i++) {
       wanted[i] = false;
     }
-    uint256 fee = calcSwapFee(tokenAddresses, amounts, wanted);
+    uint256 fee = calcSwapFee(tokenAddresses, protocols, amounts, wanted);
     require(msg.value >= fee, "Pixpress: insufficient swap fee");
 
     _matchSwap(proposeId, tokenAddresses, amounts, ids, protocols);
@@ -91,13 +91,14 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
 
   function calcSwapFee(
     address[] memory tokenAddreses,
+    uint8[] memory protocols,
     uint256[] memory amounts,
     bool[] memory wanted
   ) public view returns (uint256) {
     uint256 totalFee = 0;
     for (uint256 i = 0; i < tokenAddreses.length; i++) {
       if (wanted[i] == false) {
-        totalFee += _assetFee(tokenAddreses[i]) * amounts[i];
+        totalFee += _assetFee(tokenAddreses[i], protocols[i], amounts[i]);
       }
     }
     return totalFee;

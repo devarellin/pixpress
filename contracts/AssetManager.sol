@@ -88,11 +88,23 @@ contract AssetManager is Ownable {
     return _amFeeRatio;
   }
 
-  function _assetFee(address tokenAddress) internal view returns (uint256) {
+  function _assetFee(
+    address tokenAddress,
+    uint8 protocol,
+    uint256 amount
+  ) internal view returns (uint256) {
     if (assets[tokenAddress].tokenAddress == address(0x0)) {
-      return (_amFeeBase * _amFeeRatio) / AM_RATE_BASE;
+      if (protocol == PROTOCOL_ERC20) {
+        return (amount * _amFeeRatio) / AM_RATE_BASE;
+      } else {
+        return (_amFeeBase * _amFeeRatio) / AM_RATE_BASE;
+      }
     } else {
-      return (assets[tokenAddress].feeBase * assets[tokenAddress].feeRatio) / AM_RATE_BASE;
+      if (protocol == PROTOCOL_ERC20) {
+        return (amount * assets[tokenAddress].feeRatio) / AM_RATE_BASE;
+      } else {
+        return (assets[tokenAddress].feeBase * assets[tokenAddress].feeRatio) / AM_RATE_BASE;
+      }
     }
   }
 }

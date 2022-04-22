@@ -219,7 +219,7 @@ describe("Pixpress", () => {
         ids = [ethers.BigNumber.from(1), ethers.BigNumber.from(5)]
         protocols = [2, 2]
         wanted = [false, true]
-        fee = await read('Pixpress', 'calcSwapFee', tokenAddresses, amounts, wanted)
+        fee = await read('Pixpress', 'calcSwapFee', tokenAddresses, protocols, amounts, wanted)
         await execute('Pixpress', { from: owner, value: fee }, 'proposeSwap', receiver, note, tokenAddresses, amounts, ids, protocols, wanted)
       })
 
@@ -324,7 +324,7 @@ describe("Pixpress", () => {
       })
 
       it('create a new propose order', async () => {
-        const fee = await read('Pixpress', 'calcSwapFee', tokenAddresses, amounts, wanted)
+        const fee = await read('Pixpress', 'calcSwapFee', tokenAddresses, protocols, amounts, wanted)
         await execute('Pixpress', { from: owner, value: fee }, 'proposeSwap', receiver, note, tokenAddresses, amounts, ids, protocols, wanted)
         const record = await read('Pixpress', 'proposeRecord', 1)
         expect(record.receiver).to.equal(receiver);
@@ -363,7 +363,7 @@ describe("Pixpress", () => {
         protocols = [2, 2]
         wanted = [false, true]
         // create a propose order
-        proposeFee = await read('Pixpress', 'calcSwapFee', tokenAddresses, amounts, wanted)
+        proposeFee = await read('Pixpress', 'calcSwapFee', tokenAddresses, protocols, amounts, wanted)
         await execute('Pixpress', { from: owner, value: proposeFee }, 'proposeSwap', receiver, note, tokenAddresses, amounts, ids, protocols, wanted)
 
         // prepare match order meta
@@ -380,7 +380,7 @@ describe("Pixpress", () => {
       })
 
       it('create a new match order', async () => {
-        const fee = await read('Pixpress', 'calcSwapFee', matchTokenAddresses, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
+        const fee = await read('Pixpress', 'calcSwapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
         await execute('Pixpress', { from: owner, value: fee }, 'matchSwap', proposeId, matchTokenAddresses, matchAmounts, matchIds, matchProtocols)
         const record = await read('Pixpress', 'matchRecord', 1)
         expect(record.proposeId).to.equal(proposeId);
@@ -419,7 +419,7 @@ describe("Pixpress", () => {
         protocols = [2, 2]
         wanted = [false, true]
         // create a propose order
-        proposeFee = await read('Pixpress', 'calcSwapFee', tokenAddresses, amounts, wanted)
+        proposeFee = await read('Pixpress', 'calcSwapFee', tokenAddresses, protocols, amounts, wanted)
         await execute('Pixpress', { from: owner, value: proposeFee }, 'proposeSwap', receiver, note, tokenAddresses, amounts, ids, protocols, wanted)
 
         // create a match order
@@ -428,7 +428,7 @@ describe("Pixpress", () => {
         matchAmounts = [ethers.BigNumber.from(1), ethers.BigNumber.from(1)]
         matchIds = [ethers.BigNumber.from(4), ethers.BigNumber.from(5)]
         matchProtocols = [2, 2]
-        matchFee = await read('Pixpress', 'calcSwapFee', matchTokenAddresses, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
+        matchFee = await read('Pixpress', 'calcSwapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
         await execute('Pixpress', { from: user1, value: matchFee }, 'matchSwap', proposeId, matchTokenAddresses, matchAmounts, matchIds, matchProtocols)
         matchId = 1;
       })
