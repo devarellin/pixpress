@@ -41,7 +41,7 @@ contract AssetManager is Ownable {
     uint8 protocol,
     uint256 base,
     uint256 ratio
-  ) external {
+  ) external onlyOwner {
     require(assets[tokenAddress].tokenAddress == address(0x0), "AssetManager: asset already exist");
     assets[tokenAddress] = Asset(tokenAddress, protocol, base, ratio);
 

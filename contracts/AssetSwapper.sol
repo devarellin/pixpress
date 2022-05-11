@@ -8,9 +8,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./AssetManager.sol";
 
-contract AssetSwapper is AssetManager, ReentrancyGuard {
+contract AssetSwapper is AssetManager, ReentrancyGuard, Pausable {
   using Counters for Counters.Counter;
   using SafeERC20 for IERC20;
 
@@ -253,7 +254,7 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
     }
   }
 
-  function removeProposeRecord(uint256 proposeId) external nonReentrant {
+  function removeProposeRecord(uint256 proposeId) external nonReentrant whenNotPaused {
     require((msg.sender == _proposeRecords[proposeId].proposer), "Asset Swapper: invalid proposer");
     _removeProposeRecord(proposeId);
 
@@ -269,7 +270,7 @@ contract AssetSwapper is AssetManager, ReentrancyGuard {
     }
   }
 
-  function removeMatchRecord(uint256 matchId) public nonReentrant {
+  function removeMatchRecord(uint256 matchId) public nonReentrant whenNotPaused {
     require(_matchRecords[matchId].matcher == msg.sender, "Asset Swapper: invalid matcher");
     MatchRecord storage mRecord = _matchRecords[matchId];
     _removeProposeRecordMatchId(mRecord);

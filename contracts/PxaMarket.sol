@@ -4,9 +4,9 @@ pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "hardhat/console.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract PxaMarket is Ownable {
+contract PxaMarket is Ownable, Pausable {
   // constants
   uint256 public constant PXA_RATE_BASE = 1e6;
 
@@ -43,7 +43,7 @@ contract PxaMarket is Ownable {
     return _orders[tokenId];
   }
 
-  function createOrder(uint256 tokenId, uint256 price) external {
+  function createOrder(uint256 tokenId, uint256 price) external whenNotPaused {
     require(IERC721(_pxaAddress).ownerOf(tokenId) == msg.sender, "PxaMarket: invalid token owner");
     IERC721(_pxaAddress).safeTransferFrom(msg.sender, address(this), tokenId);
     _orders[tokenId] = PxaOrder(msg.sender, tokenId, price, 0, _orderIds.length);
@@ -52,7 +52,7 @@ contract PxaMarket is Ownable {
     emit OrderCreated(tokenId, msg.sender, price);
   }
 
-  function buy(uint256 tokenId) external payable {
+  function buy(uint256 tokenId) external payable whenNotPaused {
     require(msg.value >= _orders[tokenId].price, "PxaMarket: insufficient CELO");
     uint256 fee = (msg.value * _pxaFeeRatio) / PXA_RATE_BASE;
     uint256 rest = msg.value - fee;
@@ -65,7 +65,7 @@ contract PxaMarket is Ownable {
     emit Bought(tokenId, msg.value, _orders[tokenId].revenue);
   }
 
-  function cancelOrder(uint256 tokenId) external payable {
+  function cancelOrder(uint256 tokenId) external payable whenNotPaused {
     require(msg.sender == _orders[tokenId].seller, "PxaMarket: invalid seller");
     uint256 revenue = _orders[tokenId].revenue;
     _claim(msg.sender, tokenId);
@@ -105,7 +105,7 @@ contract PxaMarket is Ownable {
     return _pxaFeeRatio;
   }
 
-  function claim(uint256 tokenId) external payable {
+  function claim(uint256 tokenId) external payable whenNotPaused {
     _claim(msg.sender, tokenId);
   }
 

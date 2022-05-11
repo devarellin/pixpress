@@ -22,7 +22,7 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
     uint256[] memory ids,
     uint8[] memory protocols,
     bool[] memory wanted
-  ) external payable nonReentrant {
+  ) external payable nonReentrant whenNotPaused {
     uint256 fee = calcSwapFee(tokenAddresses, protocols, amounts, wanted);
     require(msg.value >= fee, "Pixpress: insufficient swap fee");
     _proposeSwap(receiver, note, tokenAddresses, amounts, ids, protocols, wanted);
@@ -40,7 +40,7 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
     uint256[] memory ids,
     uint8[] memory protocols,
     bool[] memory wanted
-  ) external payable nonReentrant {
+  ) external payable nonReentrant whenNotPaused {
     uint256 fee = perDeposit();
     _userDesposit(msg.sender, fee);
     _proposeSwap(receiver, note, tokenAddresses, amounts, ids, protocols, wanted);
@@ -52,7 +52,7 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
     uint256[] memory amounts,
     uint256[] memory ids,
     uint8[] memory protocols
-  ) external payable nonReentrant {
+  ) external payable nonReentrant whenNotPaused {
     bool[] memory wanted = new bool[](tokenAddresses.length);
     for (uint256 i = 0; i < wanted.length; i++) {
       wanted[i] = false;
@@ -73,7 +73,7 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
     uint256[] memory amounts,
     uint256[] memory ids,
     uint8[] memory protocols
-  ) external payable nonReentrant {
+  ) external payable nonReentrant whenNotPaused {
     uint256 fee = perDeposit();
     _userDesposit(msg.sender, fee);
     _matchSwap(proposeId, tokenAddresses, amounts, ids, protocols);
@@ -102,5 +102,13 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
       }
     }
     return totalFee;
+  }
+
+  function pause() external onlyOwner {
+    _pause();
+  }
+
+  function unpause() external onlyOwner {
+    _unpause();
   }
 }
