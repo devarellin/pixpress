@@ -99,6 +99,9 @@ contract AssetSwapper is AssetManager, ReentrancyGuard, Pausable {
     require(tokenAddresses.length == amounts.length, "Assest Swapper: amount record size does not match");
     require(tokenAddresses.length == ids.length, "Assest Swapper: id record size does not match");
     require(tokenAddresses.length == protocols.length, "Assest Swapper: protocol record size does not match");
+    if (_proposeRecords[proposeId].receiver != address(0)) {
+      require(_msgSender() == _proposeRecords[proposeId].receiver, "Assest Swapper: receiver does not match");
+    }
     _matchRecordIds.increment();
     uint256 id = _matchRecordIds.current();
     _matchRecords[id] = MatchRecord(

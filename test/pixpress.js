@@ -365,6 +365,50 @@ describe("Pixpress", () => {
       })
     })
 
+    describe('Match order without receiver', () => {
+      // propose order meta
+      let receiver
+      let note
+      let tokenAddresses
+      let amounts
+      let ids
+      let protocols
+      let wanted
+      let proposeFee
+
+      // match order meta
+      let proposeId;
+      let matchTokenAddresses;
+      let matchAmounts;
+      let matchIds;
+      let matchProtocols;
+      beforeEach(async () => {
+        receiver = ethers.constants.AddressZero
+        note = 'want pxa'
+        tokenAddresses = [MockCeloPunks.address, MockPxa.address]
+        amounts = [ethers.BigNumber.from(1), ethers.BigNumber.from(1)]
+        ids = [ethers.BigNumber.from(1), ethers.BigNumber.from(5)]
+        protocols = [2, 2]
+        wanted = [false, true]
+        // create a propose order
+        proposeFee = await read('Pixpress', 'calcSwapFee', tokenAddresses, protocols, amounts, wanted)
+        await execute('Pixpress', { from: owner, value: proposeFee }, 'proposeSwap', receiver, note, tokenAddresses, amounts, ids, protocols, wanted)
+
+        // prepare match order meta
+        proposeId = 1;
+        matchTokenAddresses = [MockPxa.address, MockPxa.address]
+        matchAmounts = [ethers.BigNumber.from(1), ethers.BigNumber.from(1)]
+        matchIds = [ethers.BigNumber.from(4), ethers.BigNumber.from(5)]
+        matchProtocols = [2, 2]
+      })
+
+      it('create a new match order', async () => {
+        const fee = await read('Pixpress', 'calcSwapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
+        await execute('Pixpress', { from: owner, value: fee }, 'matchSwap', proposeId, matchTokenAddresses, matchAmounts, matchIds, matchProtocols)
+        const record = await read('Pixpress', 'matchRecord', 1)
+      })
+    })
+
     describe('Match order', () => {
       // propose order meta
       let receiver
@@ -407,9 +451,19 @@ describe("Pixpress", () => {
         expect(execute('Pixpress', { from: owner }, 'matchSwap', proposeId, matchTokenAddresses, matchAmounts, matchIds, matchProtocols)).to.eventually.rejected
       })
 
+      it('cannot create a new match order if receiver not match', async () => {
+        const fee = await read('Pixpress', 'calcSwapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
+        try {
+          await execute('Pixpress', { from: owner, value: fee }, 'matchSwap', proposeId, matchTokenAddresses, matchAmounts, matchIds, matchProtocols)
+        } catch (e) {
+          expect(e).to.be.an('error')
+        }
+
+      })
+
       it('create a new match order', async () => {
         const fee = await read('Pixpress', 'calcSwapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
-        await execute('Pixpress', { from: owner, value: fee }, 'matchSwap', proposeId, matchTokenAddresses, matchAmounts, matchIds, matchProtocols)
+        await execute('Pixpress', { from: user1, value: fee }, 'matchSwap', proposeId, matchTokenAddresses, matchAmounts, matchIds, matchProtocols)
         const record = await read('Pixpress', 'matchRecord', 1)
         expect(record.proposeId).to.equal(proposeId);
         expect(record.tokenAddresses).to.eql(matchTokenAddresses);
