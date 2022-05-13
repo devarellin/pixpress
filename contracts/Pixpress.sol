@@ -108,7 +108,7 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
     _pause();
   }
 
-  function unpause() external onlyOwner {
+  function resume() external onlyOwner {
     _unpause();
   }
 }

@@ -167,10 +167,38 @@ describe("Pixpress", () => {
     })
 
     describe('Create stake sell order', async () => {
+
+      it('cannot create a stake sell order when paused', async () => {
+        await execute('Pixpress', { from: owner }, 'pause')
+        const TOKEN_ID = 3
+        const PRICE = ethers.utils.parseUnits('100')
+        try {
+          await execute('Pixpress', { from: user1 }, 'createOrder', TOKEN_ID, PRICE)
+        } catch (e) {
+          expect(e).to.be.an('error')
+        }
+      })
+
+      it('can create a stake sell order after resume', async () => {
+        await execute('Pixpress', { from: owner }, 'pause')
+        await execute('Pixpress', { from: owner }, 'resume')
+        const TOKEN_ID = 3
+        const PRICE = ethers.utils.parseUnits('100')
+        await execute('Pixpress', { from: user1 }, 'createOrder', TOKEN_ID, PRICE)
+        const newOrder = await read('Pixpress', 'pxaOrder', TOKEN_ID);
+        const newTokenOwner = await read('MockPxa', 'ownerOf', TOKEN_ID);
+        expect(newOrder.seller).to.equal(user1)
+        expect(newOrder.tokenId).to.equal(TOKEN_ID)
+        expect(newOrder.price).to.equal(PRICE)
+        expect(newOrder.revenue).to.equal(0)
+        expect(newOrder.index).to.equal(0)
+        expect(newTokenOwner).to.equal(Pixpress.address);
+      })
+
       it('create a stake sell order', async () => {
         const TOKEN_ID = 3
         const PRICE = ethers.utils.parseUnits('100')
-        await execute('Pixpress', { from: user1 }, 'createOrder', TOKEN_ID, ethers.utils.parseUnits('100'))
+        await execute('Pixpress', { from: user1 }, 'createOrder', TOKEN_ID, PRICE)
         const newOrder = await read('Pixpress', 'pxaOrder', TOKEN_ID);
         const newTokenOwner = await read('MockPxa', 'ownerOf', TOKEN_ID);
         expect(newOrder.seller).to.equal(user1)
