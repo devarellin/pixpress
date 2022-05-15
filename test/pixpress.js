@@ -307,6 +307,29 @@ describe("Pixpress", () => {
           const balAfterClaim = await ethers.provider.getBalance(owner)
           expect(balAfterClaim.gte(balBeforeClaim)).to.be.true
         })
+
+        describe('When there are other staked tokens', async () => {
+          const OWNER_TOKEN_ID = 1
+          beforeEach(async () => {
+            await execute('MockPxa', { from: owner }, 'setApprovalForAll', Pixpress.address, true)
+            await execute('Pixpress', { from: owner }, 'createOrder', OWNER_TOKEN_ID, PRICE)
+          })
+          it('transfer a portion of fee to owner when bought', async () => {
+            const balBeforeClaim = await ethers.provider.getBalance(owner)
+            await execute('Pixpress', { from: user2, value: PRICE }, 'buy', TOKEN_ID);
+            const balAfterClaim = await ethers.provider.getBalance(owner)
+            expect(balAfterClaim.gte(balBeforeClaim)).to.be.true
+          })
+
+          it('increase revenue to stakers when bought', async () => {
+            await execute('Pixpress', { from: user2, value: PRICE }, 'buy', TOKEN_ID);
+            const newOrder = await read('Pixpress', 'pxaOrder', OWNER_TOKEN_ID);
+            const feeRatio = await read('Pixpress', 'pxaFeeRatio');
+            const shareRatio = await read('Pixpress', 'pxaFeeShareRatio');
+            const rateBase = await read('Pixpress', 'PXA_RATE_BASE');
+            expect(newOrder.revenue).to.equal(PRICE.mul(feeRatio).div(rateBase).mul(shareRatio).div(rateBase).div(2))
+          })
+        })
       })
     })
   })

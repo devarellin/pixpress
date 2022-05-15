@@ -11,9 +11,6 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Holder {
   constructor(address pxaAddress, IERC20Metadata pxtAddress) PxaMarket(pxaAddress) PxtPool(pxtAddress) {}
 
-  // vars
-  uint256 public pxaFeeShareRatio = 50000;
-
   function proposeSwap(
     address receiver,
     string memory note,
@@ -26,7 +23,7 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
     uint256 fee = calcSwapFee(tokenAddresses, protocols, amounts, wanted);
     require(msg.value >= fee, "Pixpress: insufficient swap fee");
     _proposeSwap(receiver, note, tokenAddresses, amounts, ids, protocols, wanted);
-    uint256 feeShare = (fee * pxaFeeShareRatio) / PXA_RATE_BASE;
+    uint256 feeShare = (fee * _pxaFeeShareRatio) / PXA_RATE_BASE;
     _shareRevenue(feeShare);
     uint256 restFee = fee - feeShare;
     payable(owner()).transfer(restFee);
@@ -61,7 +58,7 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
     require(msg.value >= fee, "Pixpress: insufficient swap fee");
 
     _matchSwap(proposeId, tokenAddresses, amounts, ids, protocols);
-    uint256 feeShare = (fee * pxaFeeShareRatio) / PXA_RATE_BASE;
+    uint256 feeShare = (fee * _pxaFeeShareRatio) / PXA_RATE_BASE;
     _shareRevenue(feeShare);
     uint256 restFee = fee - feeShare;
     payable(owner()).transfer(restFee);

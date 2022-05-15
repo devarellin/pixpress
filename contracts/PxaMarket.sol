@@ -33,10 +33,16 @@ contract PxaMarket is Ownable, Pausable {
   uint256[] private _orderIds = new uint256[](0);
   address private _pxaAddress;
   uint256 private _pxaFeeRatio;
+  uint256 public _pxaFeeShareRatio;
 
   constructor(address pxaAddress) {
     _pxaAddress = pxaAddress;
     _pxaFeeRatio = 5000;
+    _pxaFeeShareRatio = 500000;
+  }
+
+  function pxaFeeShareRatio() external view returns (uint256) {
+    return _pxaFeeShareRatio;
   }
 
   function pxaOrder(uint256 tokenId) external view returns (PxaOrder memory order) {
@@ -56,7 +62,10 @@ contract PxaMarket is Ownable, Pausable {
     require(msg.value >= _orders[tokenId].price, "PxaMarket: insufficient CELO");
     uint256 fee = (msg.value * _pxaFeeRatio) / PXA_RATE_BASE;
     uint256 rest = msg.value - fee;
-    payable(owner()).transfer(fee);
+    uint256 feeShare = (fee * _pxaFeeShareRatio) / PXA_RATE_BASE;
+    _shareRevenue(feeShare);
+    uint256 feeForOwner = fee - feeShare;
+    payable(owner()).transfer(feeForOwner);
     payable(_orders[tokenId].seller).transfer(rest);
     _claim(msg.sender, tokenId);
     IERC721(_pxaAddress).safeTransferFrom(address(this), msg.sender, tokenId);
