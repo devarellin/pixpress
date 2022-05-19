@@ -2,48 +2,17 @@
 
 pragma solidity ^0.8.12;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "./AssetManager.sol";
+import "./interfaces/IAssetSwapper.sol";
 
-contract AssetSwapper is AssetManager, ReentrancyGuard, Pausable {
+contract AssetSwapper is AssetManager, IAssetSwapper {
   using Counters for Counters.Counter;
   using SafeERC20 for IERC20;
-
-  struct ProposeRecord {
-    address proposer;
-    address receiver;
-    string note;
-    address[] tokenAddresses;
-    uint256[] amounts;
-    uint256[] ids;
-    uint8[] protocols;
-    bool[] wanted;
-    uint256[] matchRecordIds;
-  }
-
-  struct MatchRecord {
-    uint256 proposeId;
-    address matcher;
-    address[] tokenAddresses;
-    uint256[] amounts;
-    uint256[] ids;
-    uint8[] protocols;
-    uint256 index;
-  }
-
-  // events
-
-  event Proposed(uint256 indexed id, ProposeRecord record);
-  event Matched(uint256 indexed id, MatchRecord record);
-  event Swapped(uint256 indexed proposeId, uint256 indexed matchId);
-  event ProposalRemoved(uint256 indexed id, ProposeRecord record);
-  event MatcherRemoved(uint256 indexed id, MatchRecord record);
 
   Counters.Counter private _proposeRecordIds;
   mapping(uint256 => ProposeRecord) _proposeRecords;

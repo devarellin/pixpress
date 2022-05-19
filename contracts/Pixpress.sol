@@ -3,27 +3,31 @@
 pragma solidity ^0.8.12;
 
 import "./AssetSwapper.sol";
-import "./PxtPool.sol";
-import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "./interfaces/IPxaMarket.sol";
+import "./interfaces/IPxtPool.sol";
 
-contract Pixpress is AssetSwapper, PxtPool, ERC721Holder, ERC1155Holder {
-  address public pxaMarketAddress;
+contract Pixpress is AssetSwapper {
+  IPxaMarket private _pxaMarket;
+  IPxtPool private _pxtPool;
 
-  constructor(IERC20Metadata pxtAddress, address pxaMarketAddr) PxtPool(pxtAddress) {
-    pxaMarketAddress = pxaMarketAddr;
+  constructor(address pxaMarketAddr, address pxtPoolAddr) {
+    _pxaMarket = IPxaMarket(pxaMarketAddr);
+    _pxtPool = IPxtPool(pxtPoolAddr);
   }
 
-  function setPxaMarketAddress(address _addr) external {
-    pxaMarketAddress = _addr;
+  function setPxaMarket(address _addr) external onlyRole(COORDINATOR) {
+    _pxaMarket = IPxaMarket(_addr);
+  }
+
+  function setPxtPool(address _addr) external onlyRole(COORDINATOR) {
+    _pxtPool = IPxtPool(_addr);
   }
 
   function _processFee(uint256 _fee) internal {
-    uint256 feeRatio = IPxaMarket(pxaMarketAddress).feeRatio();
-    uint256 base = IPxaMarket(pxaMarketAddress).rateBase();
+    uint256 feeRatio = _pxaMarket.feeRatio();
+    uint256 base = _pxaMarket.rateBase();
     uint256 feeShare = (_fee * feeRatio) / base;
-    IPxaMarket(pxaMarketAddress).donate{ value: feeShare }();
+    _pxaMarket.donate{ value: feeShare }();
   }
 
   function proposeSwap(
@@ -35,10 +39,24 @@ contract Pixpress is AssetSwapper, PxtPool, ERC721Holder, ERC1155Holder {
     uint8[] memory protocols,
     bool[] memory wanted
   ) external payable nonReentrant whenNotPaused {
-    uint256 fee = calcSwapFee(tokenAddresses, protocols, amounts, wanted);
+    uint256 fee = swapFee(tokenAddresses, protocols, amounts, wanted);
     require(msg.value >= fee, "Pixpress: insufficient swap fee");
     _proposeSwap(receiver, note, tokenAddresses, amounts, ids, protocols, wanted);
     _processFee(fee);
+  }
+
+  function _depositPxt(address user) internal {
+    uint256 fee = _pxtPool.perDeposit();
+    _pxtPool.userDesposit(user, fee);
+  }
+
+  function _withdrawPxt(address[2] memory users) internal {
+    uint256 fee = _pxtPool.perWithdraw();
+    if (fee > 0) {
+      for (uint256 i = 0; i < users.length; i++) {
+        _pxtPool.userWithdraw(users[i], fee / users.length);
+      }
+    }
   }
 
   function proposeSwapWithPxt(
@@ -49,9 +67,8 @@ contract Pixpress is AssetSwapper, PxtPool, ERC721Holder, ERC1155Holder {
     uint256[] memory ids,
     uint8[] memory protocols,
     bool[] memory wanted
-  ) external payable nonReentrant whenNotPaused {
-    uint256 fee = perDeposit();
-    _userDesposit(msg.sender, fee);
+  ) external nonReentrant whenNotPaused {
+    _depositPxt(msg.sender);
     _proposeSwap(receiver, note, tokenAddresses, amounts, ids, protocols, wanted);
   }
 
@@ -66,7 +83,7 @@ contract Pixpress is AssetSwapper, PxtPool, ERC721Holder, ERC1155Holder {
     for (uint256 i = 0; i < wanted.length; i++) {
       wanted[i] = false;
     }
-    uint256 fee = calcSwapFee(tokenAddresses, protocols, amounts, wanted);
+    uint256 fee = swapFee(tokenAddresses, protocols, amounts, wanted);
     require(msg.value >= fee, "Pixpress: insufficient swap fee");
     _matchSwap(proposeId, tokenAddresses, amounts, ids, protocols);
     _processFee(fee);
@@ -78,23 +95,18 @@ contract Pixpress is AssetSwapper, PxtPool, ERC721Holder, ERC1155Holder {
     uint256[] memory amounts,
     uint256[] memory ids,
     uint8[] memory protocols
-  ) external payable nonReentrant whenNotPaused {
-    uint256 fee = perDeposit();
-    _userDesposit(msg.sender, fee);
+  ) external nonReentrant whenNotPaused {
+    _depositPxt(msg.sender);
     _matchSwap(proposeId, tokenAddresses, amounts, ids, protocols);
   }
 
   function acceptSwap(uint256 proposeId, uint256 matchId) external nonReentrant {
     _acceptSwap(proposeId, matchId);
-    uint256 reward = perWithdraw();
-    if (reward > 0) {
-      _userWithdraw(msg.sender, reward / 2);
-      _userWithdraw(_matchRecords[matchId].matcher, reward / 2);
-    }
+    _withdrawPxt([msg.sender, _matchRecords[matchId].matcher]);
     _removeProposeRecord((proposeId));
   }
 
-  function calcSwapFee(
+  function swapFee(
     address[] memory tokenAddreses,
     uint8[] memory protocols,
     uint256[] memory amounts,
@@ -109,11 +121,11 @@ contract Pixpress is AssetSwapper, PxtPool, ERC721Holder, ERC1155Holder {
     return totalFee;
   }
 
-  function pause() external onlyOwner {
+  function pause() external onlyRole(COORDINATOR) {
     _pause();
   }
 
-  function resume() external onlyOwner {
+  function resume() external onlyRole(COORDINATOR) {
     _unpause();
   }
 }

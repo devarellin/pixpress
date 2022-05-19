@@ -25,131 +25,12 @@ describe("Pixpress", () => {
 
     await fixture(['Mocks', 'Main']);
     MockPxt = await get('MockPxt')
+    MockPxtPool = await get('MockPxtPool')
     MockPxtDecimal = await read('MockPxt', 'decimals');
     MockPxa = await get('MockPxa')
     MockCeloPunks = await get('MockCeloPunks');
     Pixpress = await get('Pixpress');
   });
-
-  describe("PxtPool", async () => {
-    it('is initiated with no balance', async () => {
-      const bal = await read('Pixpress', 'balance');
-      expect(bal).to.equal(0);
-    });
-
-    describe('Owner deposit', async () => {
-      const INPUT = ethers.utils.parseUnits('1000', MockPxtDecimal);
-      beforeEach(async () => {
-        await execute('MockPxt', { from: owner }, 'approve', Pixpress.address, INPUT)
-      })
-
-      it('is owner only', async () => {
-        expect(execute('Pixpress', { from: user1 }, 'ownerDeposit', INPUT)).to.eventually.throws()
-      });
-
-      describe('Owner deposit success', async () => {
-        beforeEach(async () => {
-          await execute('Pixpress', { from: owner }, 'ownerDeposit', INPUT)
-        })
-
-        it('increases the pool balance', async () => {
-          const bal = await read('Pixpress', 'balance');
-          expect(bal).to.equal(INPUT);
-        });
-
-        it('derives the correct upper window', async () => {
-          const bal = await read('Pixpress', 'balance');
-          const windowVal = await read('Pixpress', 'poolWindow');
-          const val = await read('Pixpress', 'poolUpperBoundary');
-          expect(val).to.equal(bal.mul(windowVal));
-        });
-
-        it('derives the correct lower window', async () => {
-          const bal = await read('Pixpress', 'balance');
-          const windowVal = await read('Pixpress', 'poolWindow');
-          const val = await read('Pixpress', 'poolLowerBoundary');
-          expect(val).to.equal(bal.div(windowVal));
-        });
-
-        it('derives the correct per deposit', async () => {
-          const bal = await read('Pixpress', 'balance');
-          const lowerBoundary = await read('Pixpress', 'poolLowerBoundary');
-          const perDesposit = await read('Pixpress', 'perDeposit');
-          expect(perDesposit).to.equal(bal.div(lowerBoundary));
-        })
-
-        it('derives the correct per withdraw', async () => {
-          const bal = await read('Pixpress', 'balance');
-          const upperBoundary = await read('Pixpress', 'poolUpperBoundary');
-          const perWithdraw = await read('Pixpress', 'perDeposit');
-          expect(perWithdraw).to.equal(upperBoundary.div(bal));
-        })
-      })
-    })
-
-    describe('Owner withdraw', () => {
-      const INIT_BALANCE = ethers.utils.parseUnits('1000', MockPxtDecimal);
-      beforeEach(async () => {
-        await execute('MockPxt', { from: owner }, 'approve', Pixpress.address, INIT_BALANCE)
-        await execute('Pixpress', { from: owner }, 'ownerDeposit', INIT_BALANCE)
-      })
-
-      it('cannot withdraw insufficient balance', async () => {
-        const withdrawAmount = ethers.utils.parseUnits('2000', MockPxtDecimal);
-        try {
-          await execute('Pixpress', { from: owner }, 'ownerWithdraw', withdrawAmount)
-        } catch (e) {
-          expect(e).to.be.an('error')
-        }
-      });
-
-
-      it('is owner only', async () => {
-        const withdrawAmount = ethers.utils.parseUnits('500', MockPxtDecimal);
-        expect(execute('Pixpress', { from: user1 }, 'ownerWithdraw', withdrawAmount)).to.eventually.throws()
-      });
-
-      describe('Owner withdraw success', () => {
-        const withdrawAmount = ethers.utils.parseUnits('500', MockPxtDecimal);
-        beforeEach(async () => {
-          await execute('Pixpress', { from: owner }, 'ownerWithdraw', withdrawAmount)
-        })
-
-        it('decrease the pool balance', async () => {
-          const bal = await read('Pixpress', 'balance');
-          expect(bal).to.equal(INIT_BALANCE.sub(withdrawAmount));
-        });
-
-        it('derives the correct upper window', async () => {
-          const bal = await read('Pixpress', 'balance');
-          const windowVal = await read('Pixpress', 'poolWindow');
-          const val = await read('Pixpress', 'poolUpperBoundary');
-          expect(val).to.equal(bal.mul(windowVal));
-        });
-
-        it('derives the correct lower window', async () => {
-          const bal = await read('Pixpress', 'balance');
-          const windowVal = await read('Pixpress', 'poolWindow');
-          const val = await read('Pixpress', 'poolLowerBoundary');
-          expect(val).to.equal(bal.div(windowVal));
-        });
-
-        it('derives the correct per deposit', async () => {
-          const bal = await read('Pixpress', 'balance');
-          const lowerBoundary = await read('Pixpress', 'poolLowerBoundary');
-          const perDesposit = await read('Pixpress', 'perDeposit');
-          expect(perDesposit).to.equal(bal.div(lowerBoundary));
-        })
-
-        it('derives the correct per withdraw', async () => {
-          const bal = await read('Pixpress', 'balance');
-          const upperBoundary = await read('Pixpress', 'poolUpperBoundary');
-          const perWithdraw = await read('Pixpress', 'perDeposit');
-          expect(perWithdraw).to.equal(upperBoundary.div(bal));
-        })
-      })
-    })
-  })
 
   describe('Main contract', () => {
     beforeEach(async () => {
@@ -192,7 +73,7 @@ describe("Pixpress", () => {
       })
 
       it('create a new propose order', async () => {
-        const fee = await read('Pixpress', 'calcSwapFee', tokenAddresses, protocols, amounts, wanted)
+        const fee = await read('Pixpress', 'swapFee', tokenAddresses, protocols, amounts, wanted)
         await execute('Pixpress', { from: owner, value: fee }, 'proposeSwap', receiver, note, tokenAddresses, amounts, ids, protocols, wanted)
         const record = await read('Pixpress', 'proposeRecord', 1)
         expect(record.receiver).to.equal(receiver);
@@ -231,7 +112,7 @@ describe("Pixpress", () => {
         protocols = [2, 2]
         wanted = [false, true]
         // create a propose order
-        proposeFee = await read('Pixpress', 'calcSwapFee', tokenAddresses, protocols, amounts, wanted)
+        proposeFee = await read('Pixpress', 'swapFee', tokenAddresses, protocols, amounts, wanted)
         await execute('Pixpress', { from: owner, value: proposeFee }, 'proposeSwap', receiver, note, tokenAddresses, amounts, ids, protocols, wanted)
 
         // prepare match order meta
@@ -243,7 +124,7 @@ describe("Pixpress", () => {
       })
 
       it('create a new match order', async () => {
-        const fee = await read('Pixpress', 'calcSwapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
+        const fee = await read('Pixpress', 'swapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
         await execute('Pixpress', { from: owner, value: fee }, 'matchSwap', proposeId, matchTokenAddresses, matchAmounts, matchIds, matchProtocols)
         const record = await read('Pixpress', 'matchRecord', 1)
       })
@@ -275,7 +156,7 @@ describe("Pixpress", () => {
         protocols = [2, 2]
         wanted = [false, true]
         // create a propose order
-        proposeFee = await read('Pixpress', 'calcSwapFee', tokenAddresses, protocols, amounts, wanted)
+        proposeFee = await read('Pixpress', 'swapFee', tokenAddresses, protocols, amounts, wanted)
         await execute('Pixpress', { from: owner, value: proposeFee }, 'proposeSwap', receiver, note, tokenAddresses, amounts, ids, protocols, wanted)
 
         // prepare match order meta
@@ -292,7 +173,7 @@ describe("Pixpress", () => {
       })
 
       it('cannot create a new match order if receiver not match', async () => {
-        const fee = await read('Pixpress', 'calcSwapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
+        const fee = await read('Pixpress', 'swapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
         try {
           await execute('Pixpress', { from: owner, value: fee }, 'matchSwap', proposeId, matchTokenAddresses, matchAmounts, matchIds, matchProtocols)
         } catch (e) {
@@ -302,7 +183,7 @@ describe("Pixpress", () => {
       })
 
       it('create a new match order', async () => {
-        const fee = await read('Pixpress', 'calcSwapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
+        const fee = await read('Pixpress', 'swapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
         await execute('Pixpress', { from: user1, value: fee }, 'matchSwap', proposeId, matchTokenAddresses, matchAmounts, matchIds, matchProtocols)
         const record = await read('Pixpress', 'matchRecord', 1)
         expect(record.proposeId).to.equal(proposeId);
@@ -341,7 +222,7 @@ describe("Pixpress", () => {
         protocols = [2, 2]
         wanted = [false, true]
         // create a propose order
-        proposeFee = await read('Pixpress', 'calcSwapFee', tokenAddresses, protocols, amounts, wanted)
+        proposeFee = await read('Pixpress', 'swapFee', tokenAddresses, protocols, amounts, wanted)
         await execute('Pixpress', { from: owner, value: proposeFee }, 'proposeSwap', receiver, note, tokenAddresses, amounts, ids, protocols, wanted)
 
         // create a match order
@@ -350,7 +231,7 @@ describe("Pixpress", () => {
         matchAmounts = [ethers.BigNumber.from(1), ethers.BigNumber.from(1)]
         matchIds = [ethers.BigNumber.from(4), ethers.BigNumber.from(5)]
         matchProtocols = [2, 2]
-        matchFee = await read('Pixpress', 'calcSwapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
+        matchFee = await read('Pixpress', 'swapFee', matchTokenAddresses, matchProtocols, matchAmounts, new Array(matchTokenAddresses.length).fill(false))
         await execute('Pixpress', { from: user1, value: matchFee }, 'matchSwap', proposeId, matchTokenAddresses, matchAmounts, matchIds, matchProtocols)
         matchId = 1;
       })
@@ -365,9 +246,9 @@ describe("Pixpress", () => {
 
       it('reward both user with PXT liquidity', async () => {
         const INPUT = ethers.utils.parseUnits('10000', MockPxtDecimal);
-        await execute('MockPxt', { from: owner }, 'approve', Pixpress.address, INPUT)
-        await execute('Pixpress', { from: owner }, 'ownerDeposit', INPUT)
-        const totalReward = await read('Pixpress', 'perWithdraw');
+        await execute('MockPxt', { from: owner }, 'approve', MockPxtPool.address, INPUT)
+        await execute('MockPxtPool', { from: owner }, 'systemDeposit', INPUT)
+        const totalReward = await read('MockPxtPool', 'perWithdraw');
         await execute('Pixpress', { from: owner }, 'acceptSwap', proposeId, matchId);
         const reward = await read('MockPxt', 'balanceOf', user1);
         expect(totalReward.div(ethers.BigNumber.from(2))).to.equal(reward)

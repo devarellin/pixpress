@@ -1,25 +1,30 @@
 module.exports = async ({ deployments, getNamedAccounts, network }) => {
-    const { get, deploy } = deployments
+    const { get, read, execute, deploy } = deployments
     const { deployer } = await getNamedAccounts();
 
     let pxaMarketAddress
-    let pxtAddress
+    let pxtPoolAddress
 
     if (network.tags.local) {
-        const MockPxt = await get('MockPxt');
         const MockPxaMarket = await get('MockPxaMarket');
-        pxtAddress = MockPxt.address
+        const MockPxtPool = await get('MockPxtPool');
         pxaMarketAddress = MockPxaMarket.address
+        pxtPoolAddress = MockPxtPool.address
     } else {
-        pxtAddress = network.config.pxtAddress
         pxaMarketAddress = network.config.pxaMarketAddress
+        pxtPoolAddress = network.config.pxtPoolAddress
     }
 
     await deploy('Pixpress', {
         from: deployer,
         log: true,
-        args: [pxtAddress, pxaMarketAddress]
+        args: [pxaMarketAddress, pxtPoolAddress]
     });
+
+    // open access control
+    const Pixpress = await get('Pixpress');
+    const coordernatorRole = await read('MockPxtPool', 'COORDINATOR');
+    await execute('MockPxtPool', { from: deployer }, 'grantRole', coordernatorRole, Pixpress.address);
 };
 
 module.exports.tags = ['Main'];

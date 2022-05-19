@@ -35,8 +35,8 @@ module.exports = {
       url: "https://alfajores-forno.celo-testnet.org",
       chainId: 44787,
       accounts: [process.env.PRIVATE_KEY],
-      pxtAddress: '0xd5E3bD9e68578F711407579991E01853Aa0d0B86',
       pxaMarketAddress: '0x6189901e29C36b411274b81Cc20891f65FC37a44',
+      pxtPoolAddress: '0xf12Bae32FA1511Ef1b87A0F51d3D54eb48e38180',
       tags: ['testnet']
     },
     celo: {
