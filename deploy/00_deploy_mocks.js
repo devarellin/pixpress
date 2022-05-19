@@ -1,9 +1,18 @@
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  await deploy('MockPxa', {
+  const MockPxa = await deploy('MockPxa', {
     from: deployer,
     log: true,
+  });
+  const MockPws = await deploy('MockPWS', {
+    from: deployer,
+    log: true,
+  });
+  await deploy('MockPxaMarket', {
+    from: deployer,
+    log: true,
+    args: [MockPxa.address, MockPws.address]
   });
   await deploy('MockPxt', {
     from: deployer,

@@ -3,13 +3,28 @@
 pragma solidity ^0.8.12;
 
 import "./AssetSwapper.sol";
-import "./PxaMarket.sol";
 import "./PxtPool.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "./interfaces/IPxaMarket.sol";
 
-contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Holder {
-  constructor(address pxaAddress, IERC20Metadata pxtAddress) PxaMarket(pxaAddress) PxtPool(pxtAddress) {}
+contract Pixpress is AssetSwapper, PxtPool, ERC721Holder, ERC1155Holder {
+  address public pxaMarketAddress;
+
+  constructor(IERC20Metadata pxtAddress, address pxaMarketAddr) PxtPool(pxtAddress) {
+    pxaMarketAddress = pxaMarketAddr;
+  }
+
+  function setPxaMarketAddress(address _addr) external {
+    pxaMarketAddress = _addr;
+  }
+
+  function _processFee(uint256 _fee) internal {
+    uint256 feeRatio = IPxaMarket(pxaMarketAddress).feeRatio();
+    uint256 base = IPxaMarket(pxaMarketAddress).rateBase();
+    uint256 feeShare = (_fee * feeRatio) / base;
+    IPxaMarket(pxaMarketAddress).donate{ value: feeShare }();
+  }
 
   function proposeSwap(
     address receiver,
@@ -23,10 +38,7 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
     uint256 fee = calcSwapFee(tokenAddresses, protocols, amounts, wanted);
     require(msg.value >= fee, "Pixpress: insufficient swap fee");
     _proposeSwap(receiver, note, tokenAddresses, amounts, ids, protocols, wanted);
-    uint256 feeShare = (fee * _pxaFeeShareRatio) / PXA_RATE_BASE;
-    _shareRevenue(feeShare);
-    uint256 restFee = fee - feeShare;
-    payable(owner()).transfer(restFee);
+    _processFee(fee);
   }
 
   function proposeSwapWithPxt(
@@ -56,12 +68,8 @@ contract Pixpress is AssetSwapper, PxaMarket, PxtPool, ERC721Holder, ERC1155Hold
     }
     uint256 fee = calcSwapFee(tokenAddresses, protocols, amounts, wanted);
     require(msg.value >= fee, "Pixpress: insufficient swap fee");
-
     _matchSwap(proposeId, tokenAddresses, amounts, ids, protocols);
-    uint256 feeShare = (fee * _pxaFeeShareRatio) / PXA_RATE_BASE;
-    _shareRevenue(feeShare);
-    uint256 restFee = fee - feeShare;
-    payable(owner()).transfer(restFee);
+    _processFee(fee);
   }
 
   function matchSwapWithPxt(

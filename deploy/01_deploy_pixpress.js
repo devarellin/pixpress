@@ -2,23 +2,23 @@ module.exports = async ({ deployments, getNamedAccounts, network }) => {
     const { get, deploy } = deployments
     const { deployer } = await getNamedAccounts();
 
-    let pxaAddress
+    let pxaMarketAddress
     let pxtAddress
 
     if (network.tags.local) {
-        const MockPxa = await get('MockPxa');
         const MockPxt = await get('MockPxt');
-        pxaAddress = MockPxa.address
+        const MockPxaMarket = await get('MockPxaMarket');
         pxtAddress = MockPxt.address
+        pxaMarketAddress = MockPxaMarket.address
     } else {
-        pxaAddress = network.config.pxaAddress
         pxtAddress = network.config.pxtAddress
+        pxaMarketAddress = network.config.pxaMarketAddress
     }
 
     await deploy('Pixpress', {
         from: deployer,
         log: true,
-        args: [pxaAddress, pxtAddress]
+        args: [pxtAddress, pxaMarketAddress]
     });
 };
 
