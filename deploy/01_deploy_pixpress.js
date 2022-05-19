@@ -21,10 +21,12 @@ module.exports = async ({ deployments, getNamedAccounts, network }) => {
         args: [pxaMarketAddress, pxtPoolAddress]
     });
 
-    // open access control
-    const Pixpress = await get('Pixpress');
-    const coordernatorRole = await read('MockPxtPool', 'COORDINATOR');
-    await execute('MockPxtPool', { from: deployer }, 'grantRole', coordernatorRole, Pixpress.address);
+    if (network.tags.local) {
+        // open access control
+        const Pixpress = await get('Pixpress');
+        const coordernatorRole = await read('MockPxtPool', 'COORDINATOR');
+        await execute('MockPxtPool', { from: deployer }, 'grantRole', coordernatorRole, Pixpress.address);
+    }
 };
 
 module.exports.tags = ['Main'];
