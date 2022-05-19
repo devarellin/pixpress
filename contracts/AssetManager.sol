@@ -17,7 +17,7 @@ contract AssetManager is IAssetManager, AccessControl, ReentrancyGuard, Pausable
 
   // vars
   uint256 _amFeeBase = 10 ether;
-  uint256 _amFeeRatio = 10000;
+  uint256 _amFeeRatio = 20000;
 
   mapping(address => Asset) public assets;
 
