@@ -50,7 +50,9 @@ interface IPxaMarket {
 
   function setFeeShareRatio(uint256 value) external;
 
-  function donate() external payable;
+  function addDividend() external payable;
+
+  function shareIncome() external payable;
 
   function income() external view returns (uint256);
 

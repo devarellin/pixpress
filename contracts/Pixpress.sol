@@ -24,10 +24,7 @@ contract Pixpress is AssetSwapper {
   }
 
   function _processFee(uint256 _fee) internal {
-    uint256 feeRatio = _pxaMarket.feeRatio();
-    uint256 base = _pxaMarket.rateBase();
-    uint256 feeShare = (_fee * feeRatio) / base;
-    _pxaMarket.donate{ value: feeShare }();
+    _pxaMarket.shareIncome{ value: _fee }();
   }
 
   function proposeSwap(

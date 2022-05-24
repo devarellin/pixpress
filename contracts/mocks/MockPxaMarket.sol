@@ -53,7 +53,7 @@ contract MockPxaMarket is Pausable, IPxaMarket, AccessControl, ERC721Holder {
     uint256 fee = (msg.value * _feeRatio) / RATE_BASE;
     uint256 rest = msg.value - fee;
     uint256 feeShare = (fee * _feeShareRatio) / RATE_BASE;
-    _donate(feeShare);
+    _addDividend(feeShare);
     uint256 feeForOwner = fee - feeShare;
     _addIncome(feeForOwner);
     payable(_orders[tokenId].seller).transfer(rest);
@@ -114,8 +114,15 @@ contract MockPxaMarket is Pausable, IPxaMarket, AccessControl, ERC721Holder {
     _feeShareRatio = value;
   }
 
-  function donate() public payable {
-    _donate(msg.value);
+  function shareIncome() public payable {
+    uint256 _dividends = (msg.value * _feeShareRatio) / RATE_BASE;
+    uint256 _ownerIncome = msg.value - _dividends;
+    _addDividend(_dividends);
+    _addIncome(_ownerIncome);
+  }
+
+  function addDividend() public payable {
+    _addDividend(msg.value);
   }
 
   function income() external view returns (uint256) {
@@ -148,7 +155,7 @@ contract MockPxaMarket is Pausable, IPxaMarket, AccessControl, ERC721Holder {
     _orderIds.pop();
   }
 
-  function _donate(uint256 amount) internal {
+  function _addDividend(uint256 amount) internal {
     if (_orderIds.length == 0) return;
     uint256 totalWeight = IPWS(_pwsAddress).totalWeightOf(_orderIds);
     for (uint256 i = 0; i < _orderIds.length; i++) {
