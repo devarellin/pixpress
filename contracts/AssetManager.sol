@@ -16,8 +16,8 @@ contract AssetManager is IAssetManager, AccessControl, ReentrancyGuard, Pausable
   bytes32 public constant COORDINATOR = keccak256("COORDINATOR");
 
   // vars
-  uint256 _amFeeBase = 10 ether;
-  uint256 _amFeeRatio = 20000;
+  uint256 _amFeeBase = 20 ether;
+  uint256 _amFeeRatio = 10000;
 
   mapping(address => Asset) public assets;
 
